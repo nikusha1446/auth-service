@@ -1,5 +1,10 @@
+import { app } from './app.js';
+import { env } from './config/env.js';
+
 const main = (): void => {
-  console.log('Auth Service starting...');
+  app.listen(env.PORT, () => {
+    console.log(`Server running on port ${env.PORT}`);
+  });
 };
 
 main();
