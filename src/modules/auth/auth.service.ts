@@ -1,8 +1,10 @@
-import { hash } from 'argon2';
+import { hash, verify } from 'argon2';
 import { db } from '../../config/database.js';
-import { RegisterInput } from './auth.types.js';
+import { LoginInput, RegisterInput } from './auth.types.js';
 import { generateToken } from '../../common/utils/crypto.js';
 import { sendVerificationEmail } from '../../common/services/email.service.js';
+import { generateAccessToken } from '../../common/utils/jwt.js';
+import { env } from '../../config/env.js';
 
 export const register = async (
   input: RegisterInput
@@ -49,4 +51,47 @@ export const verifyEmail = async (token: string): Promise<void> => {
       emailVerifyToken: null,
     },
   });
+};
+
+export const login = async (
+  input: LoginInput
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  const user = await db.user.findUnique({
+    where: { email: input.email },
+  });
+
+  if (!user || !user.passwordHash) {
+    throw new Error('Invalid credentials');
+  }
+
+  const validPassword = await verify(user.passwordHash, input.password);
+
+  if (!validPassword) {
+    throw new Error('Invalid credentials');
+  }
+
+  if (!user.emailVerified) {
+    throw new Error('Please verify your email before logging in');
+  }
+
+  const accessToken = generateAccessToken({
+    userId: user.id,
+    email: user.email,
+  });
+
+  const refreshToken = generateToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(
+    expiresAt.getDate() + parseInt(env.REFRESH_TOKEN_EXPIRES_IN_DAYS)
+  );
+
+  await db.refreshToken.create({
+    data: {
+      token: refreshToken,
+      userId: user.id,
+      expiresAt,
+    },
+  });
+
+  return { accessToken, refreshToken };
 };

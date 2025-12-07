@@ -6,6 +6,8 @@ const getStatusCode = (message: string): number => {
     'Email already registered': 409,
     'Invalid verification token': 400,
     'Email already verified': 400,
+    'Invalid credentials': 401,
+    'Please verify your email before logging in': 403,
   };
 
   return errorStatusMap[message] || 500;

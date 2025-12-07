@@ -9,6 +9,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string(),
   RESEND_API_KEY: z.string().optional(),
   APP_URL: z.string().default('http://localhost:3000'),
+  JWT_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string().default('15m'),
+  REFRESH_TOKEN_EXPIRES_IN_DAYS: z.string().default('7'),
 });
 
 export const env = envSchema.parse(process.env);

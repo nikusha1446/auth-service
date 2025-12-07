@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import * as authService from './auth.service.js';
-import { RegisterInput, VerifyEmailInput } from './auth.types.js';
+import { LoginInput, RegisterInput, VerifyEmailInput } from './auth.types.js';
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
@@ -29,6 +29,23 @@ export const verifyEmail: RequestHandler = async (req, res, next) => {
       success: true,
       data: {
         message: 'Email verified successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const login: RequestHandler = async (req, res, next) => {
+  try {
+    const input = req.body as LoginInput;
+    const result = await authService.login(input);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (error) {
