@@ -1,11 +1,20 @@
 import { ErrorRequestHandler } from 'express';
 import { env } from '../../config/env.js';
 
+const getStatusCode = (message: string): number => {
+  const errorStatusMap: Record<string, number> = {
+    'Email already registered': 409,
+    'Invalid verification token': 400,
+    'Email already verified': 400,
+  };
+
+  return errorStatusMap[message] || 500;
+};
+
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);
 
-  const statusCode =
-    err.statusCode || (err.message === 'Email already registered' ? 409 : 500);
+  const statusCode = err.statusCode || getStatusCode(err.message);
   const message = err.message || 'Internal Server Error';
 
   res.status(statusCode).json({

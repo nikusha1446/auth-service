@@ -32,3 +32,21 @@ export const register = async (
 
   return { userId: user.id };
 };
+
+export const verifyEmail = async (token: string): Promise<void> => {
+  const user = await db.user.findFirst({
+    where: { emailVerifyToken: token },
+  });
+
+  if (!user) {
+    throw new Error('Invalid verification token');
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      emailVerifyToken: null,
+    },
+  });
+};
