@@ -4,10 +4,12 @@ import { env } from '../../config/env.js';
 const getStatusCode = (message: string): number => {
   const errorStatusMap: Record<string, number> = {
     'Email already registered': 409,
-    'Invalid verification token': 400,
-    'Email already verified': 400,
+    'Invalid verification token': 401,
     'Invalid credentials': 401,
+    'Email already verified': 400,
     'Please verify your email before logging in': 403,
+    'Invalid refresh token': 401,
+    'Refresh token expired': 401,
   };
 
   return errorStatusMap[message] || 500;

@@ -95,3 +95,44 @@ export const login = async (
 
   return { accessToken, refreshToken };
 };
+
+export const refresh = async (
+  token: string
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  const existingToken = await db.refreshToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!existingToken) {
+    throw new Error('Invalid refresh token');
+  }
+
+  if (existingToken.expiresAt < new Date()) {
+    await db.refreshToken.delete({ where: { id: existingToken.id } });
+    throw new Error('Refresh token expired');
+  }
+
+  await db.refreshToken.delete({ where: { id: existingToken.id } });
+
+  const accessToken = generateAccessToken({
+    userId: existingToken.user.id,
+    email: existingToken.user.email,
+  });
+
+  const newRefreshToken = generateToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(
+    expiresAt.getDate() + parseInt(env.REFRESH_TOKEN_EXPIRES_IN_DAYS)
+  );
+
+  await db.refreshToken.create({
+    data: {
+      token: newRefreshToken,
+      userId: existingToken.user.id,
+      expiresAt,
+    },
+  });
+
+  return { accessToken, refreshToken: newRefreshToken };
+};
