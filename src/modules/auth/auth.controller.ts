@@ -9,6 +9,7 @@ import {
   ResetPasswordInput,
   VerifyEmailInput,
 } from './auth.types.js';
+import { db } from '../../config/database.js';
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
@@ -94,6 +95,22 @@ export const logout: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const logoutAll: RequestHandler = async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    await authService.logoutAll(userId);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Logged out from all devices successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const forgotPassword: RequestHandler = async (req, res, next) => {
   try {
     const { email } = req.body as ForgotPasswordInput;
@@ -120,6 +137,37 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
       data: {
         message: 'Password reset successfully',
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const me: RequestHandler = async (req, res, next) => {
+  try {
+    const user = await db.user.findUnique({
+      where: {
+        id: req.user!.userId,
+      },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'User not found' },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { user },
     });
   } catch (error) {
     next(error);
