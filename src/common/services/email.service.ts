@@ -52,3 +52,23 @@ export const sendVerificationEmail = async (
     `,
   });
 };
+
+export const sendPasswordResetEmail = async (
+  email: string,
+  token: string
+): Promise<boolean> => {
+  const resetUrl = `${env.APP_URL}/auth/reset-password?token=${token}`;
+
+  return sendEmail({
+    to: email,
+    subject: `Reset your password`,
+    html: `
+      <h1>Password Reset</h1>
+      <p>You requested to reset your password. Click the link below:</p>
+      <a href="${resetUrl}">Reset Password</a>
+      <p>Or copy this link: ${resetUrl}</p>
+      <p>This link expires in 1 hour.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+    `,
+  });
+};

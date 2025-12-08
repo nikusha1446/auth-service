@@ -1,10 +1,12 @@
 import { RequestHandler } from 'express';
 import * as authService from './auth.service.js';
 import {
+  ForgotPasswordInput,
   LoginInput,
   LogoutInput,
   RefreshTokenInput,
   RegisterInput,
+  ResetPasswordInput,
   VerifyEmailInput,
 } from './auth.types.js';
 
@@ -85,6 +87,38 @@ export const logout: RequestHandler = async (req, res, next) => {
       success: true,
       data: {
         message: 'Logged out successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword: RequestHandler = async (req, res, next) => {
+  try {
+    const { email } = req.body as ForgotPasswordInput;
+    await authService.forgotPassword(email);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'If an account exists, a password reset email has been sent',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword: RequestHandler = async (req, res, next) => {
+  try {
+    const input = req.body as ResetPasswordInput;
+    await authService.resetPassword(input);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Password reset successfully',
       },
     });
   } catch (error) {

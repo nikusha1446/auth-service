@@ -1,8 +1,11 @@
 import { hash, verify } from 'argon2';
 import { db } from '../../config/database.js';
-import { LoginInput, RegisterInput } from './auth.types.js';
+import { LoginInput, RegisterInput, ResetPasswordInput } from './auth.types.js';
 import { generateToken } from '../../common/utils/crypto.js';
-import { sendVerificationEmail } from '../../common/services/email.service.js';
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from '../../common/services/email.service.js';
 import { generateAccessToken } from '../../common/utils/jwt.js';
 import { env } from '../../config/env.js';
 
@@ -154,5 +157,62 @@ export const logout = async (token: string): Promise<void> => {
 export const logoutAll = async (userId: string): Promise<void> => {
   await db.refreshToken.deleteMany({
     where: { userId },
+  });
+};
+
+export const forgotPassword = async (email: string): Promise<void> => {
+  const user = await db.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    return;
+  }
+
+  const passwordResetToken = generateToken();
+  const passwordResetExpires = new Date();
+  passwordResetExpires.setHours(passwordResetExpires.getHours() + 1);
+
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetToken,
+      passwordResetExpires,
+    },
+  });
+
+  await sendPasswordResetEmail(email, passwordResetToken);
+};
+
+export const resetPassword = async (
+  input: ResetPasswordInput
+): Promise<void> => {
+  const user = await db.user.findFirst({
+    where: { passwordResetToken: input.token },
+  });
+
+  if (!user) {
+    throw new Error('Invalid reset token');
+  }
+
+  if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+    throw new Error('Reset token expired');
+  }
+
+  const passwordHash = await hash(input.password);
+
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    },
+  });
+
+  await db.refreshToken.deleteMany({
+    where: {
+      userId: user.id,
+    },
   });
 };

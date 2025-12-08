@@ -6,10 +6,11 @@ const getStatusCode = (message: string): number => {
     'Email already registered': 409,
     'Invalid verification token': 401,
     'Invalid credentials': 401,
-    'Email already verified': 400,
     'Please verify your email before logging in': 403,
     'Invalid refresh token': 401,
     'Refresh token expired': 401,
+    'Invalid reset token': 400,
+    'Reset token expired': 400,
   };
 
   return errorStatusMap[message] || 500;
