@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import * as authService from './auth.service.js';
 import {
   LoginInput,
+  LogoutInput,
   RefreshTokenInput,
   RegisterInput,
   VerifyEmailInput,
@@ -68,6 +69,22 @@ export const refresh: RequestHandler = async (req, res, next) => {
       data: {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const logout: RequestHandler = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body as LogoutInput;
+    await authService.logout(refreshToken);
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Logged out successfully',
       },
     });
   } catch (error) {

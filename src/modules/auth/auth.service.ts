@@ -136,3 +136,23 @@ export const refresh = async (
 
   return { accessToken, refreshToken: newRefreshToken };
 };
+
+export const logout = async (token: string): Promise<void> => {
+  const existingToken = await db.refreshToken.findUnique({
+    where: {
+      token,
+    },
+  });
+
+  if (!existingToken) {
+    throw new Error('Invalid refresh token');
+  }
+
+  await db.refreshToken.delete({ where: { id: existingToken.id } });
+};
+
+export const logoutAll = async (userId: string): Promise<void> => {
+  await db.refreshToken.deleteMany({
+    where: { userId },
+  });
+};
