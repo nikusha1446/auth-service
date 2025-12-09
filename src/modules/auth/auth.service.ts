@@ -8,9 +8,16 @@ import {
 } from '../../common/services/email.service.js';
 import { generateAccessToken } from '../../common/utils/jwt.js';
 import { env } from '../../config/env.js';
+import { createAuditLog } from '../../common/services/audit.service.js';
+
+export interface RequestInfo {
+  ipAddress: string;
+  userAgent: string;
+}
 
 export const register = async (
-  input: RegisterInput
+  input: RegisterInput,
+  requestInfo: RequestInfo
 ): Promise<{ userId: string }> => {
   const existingUser = await db.user.findUnique({
     where: {
@@ -35,10 +42,19 @@ export const register = async (
 
   await sendVerificationEmail(user.email, emailVerifyToken);
 
+  await createAuditLog({
+    userId: user.id,
+    action: 'REGISTER',
+    ...requestInfo,
+  });
+
   return { userId: user.id };
 };
 
-export const verifyEmail = async (token: string): Promise<void> => {
+export const verifyEmail = async (
+  token: string,
+  requestInfo: RequestInfo
+): Promise<void> => {
   const user = await db.user.findFirst({
     where: { emailVerifyToken: token },
   });
@@ -54,10 +70,17 @@ export const verifyEmail = async (token: string): Promise<void> => {
       emailVerifyToken: null,
     },
   });
+
+  await createAuditLog({
+    userId: user.id,
+    action: 'EMAIL_VERIFIED',
+    ...requestInfo,
+  });
 };
 
 export const login = async (
-  input: LoginInput
+  input: LoginInput,
+  requestInfo: RequestInfo
 ): Promise<{ accessToken: string; refreshToken: string }> => {
   const user = await db.user.findUnique({
     where: { email: input.email },
@@ -94,6 +117,12 @@ export const login = async (
       userId: user.id,
       expiresAt,
     },
+  });
+
+  await createAuditLog({
+    userId: user.id,
+    action: 'LOGIN',
+    ...requestInfo,
   });
 
   return { accessToken, refreshToken };
@@ -140,7 +169,10 @@ export const refresh = async (
   return { accessToken, refreshToken: newRefreshToken };
 };
 
-export const logout = async (token: string): Promise<void> => {
+export const logout = async (
+  token: string,
+  requestInfo: RequestInfo
+): Promise<void> => {
   const existingToken = await db.refreshToken.findUnique({
     where: {
       token,
@@ -152,11 +184,26 @@ export const logout = async (token: string): Promise<void> => {
   }
 
   await db.refreshToken.delete({ where: { id: existingToken.id } });
+
+  await createAuditLog({
+    userId: existingToken.userId,
+    action: 'LOGOUT',
+    ...requestInfo,
+  });
 };
 
-export const logoutAll = async (userId: string): Promise<void> => {
+export const logoutAll = async (
+  userId: string,
+  requestInfo: RequestInfo
+): Promise<void> => {
   await db.refreshToken.deleteMany({
     where: { userId },
+  });
+
+  await createAuditLog({
+    userId,
+    action: 'LOGOUT_ALL',
+    ...requestInfo,
   });
 };
 
@@ -185,7 +232,8 @@ export const forgotPassword = async (email: string): Promise<void> => {
 };
 
 export const resetPassword = async (
-  input: ResetPasswordInput
+  input: ResetPasswordInput,
+  requestInfo: RequestInfo
 ): Promise<void> => {
   const user = await db.user.findFirst({
     where: { passwordResetToken: input.token },
@@ -214,5 +262,11 @@ export const resetPassword = async (
     where: {
       userId: user.id,
     },
+  });
+
+  await createAuditLog({
+    userId: user.id,
+    action: 'PASSWORD_RESET',
+    ...requestInfo,
   });
 };

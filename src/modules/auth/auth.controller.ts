@@ -10,11 +10,18 @@ import {
   VerifyEmailInput,
 } from './auth.types.js';
 import { db } from '../../config/database.js';
+import { getClientIp, getUserAgent } from '../../common/utils/request.js';
+import { getAuditLogs } from '../../common/services/audit.service.js';
+
+const getRequestInfo = (req: Parameters<RequestHandler>[0]) => ({
+  ipAddress: getClientIp(req),
+  userAgent: getUserAgent(req),
+});
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
     const input = req.body as RegisterInput;
-    const result = await authService.register(input);
+    const result = await authService.register(input, getRequestInfo(req));
 
     res.status(201).json({
       success: true,
@@ -32,7 +39,7 @@ export const register: RequestHandler = async (req, res, next) => {
 export const verifyEmail: RequestHandler = async (req, res, next) => {
   try {
     const { token } = req.body as VerifyEmailInput;
-    await authService.verifyEmail(token);
+    await authService.verifyEmail(token, getRequestInfo(req));
 
     res.json({
       success: true,
@@ -48,7 +55,7 @@ export const verifyEmail: RequestHandler = async (req, res, next) => {
 export const login: RequestHandler = async (req, res, next) => {
   try {
     const input = req.body as LoginInput;
-    const result = await authService.login(input);
+    const result = await authService.login(input, getRequestInfo(req));
 
     res.json({
       success: true,
@@ -82,7 +89,7 @@ export const refresh: RequestHandler = async (req, res, next) => {
 export const logout: RequestHandler = async (req, res, next) => {
   try {
     const { refreshToken } = req.body as LogoutInput;
-    await authService.logout(refreshToken);
+    await authService.logout(refreshToken, getRequestInfo(req));
 
     res.json({
       success: true,
@@ -98,7 +105,7 @@ export const logout: RequestHandler = async (req, res, next) => {
 export const logoutAll: RequestHandler = async (req, res, next) => {
   try {
     const userId = req.user!.userId;
-    await authService.logoutAll(userId);
+    await authService.logoutAll(userId, getRequestInfo(req));
 
     res.json({
       success: true,
@@ -130,7 +137,7 @@ export const forgotPassword: RequestHandler = async (req, res, next) => {
 export const resetPassword: RequestHandler = async (req, res, next) => {
   try {
     const input = req.body as ResetPasswordInput;
-    await authService.resetPassword(input);
+    await authService.resetPassword(input, getRequestInfo(req));
 
     res.json({
       success: true,
@@ -168,6 +175,20 @@ export const me: RequestHandler = async (req, res, next) => {
     res.json({
       success: true,
       data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const auditLogs: RequestHandler = async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const logs = await getAuditLogs(userId);
+
+    res.json({
+      success: true,
+      data: { logs },
     });
   } catch (error) {
     next(error);

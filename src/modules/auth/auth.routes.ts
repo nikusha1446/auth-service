@@ -10,6 +10,7 @@ import {
   verifyEmailSchema,
 } from './auth.types.js';
 import {
+  auditLogs,
   forgotPassword,
   login,
   logout,
@@ -47,5 +48,6 @@ router.post(
   resetPassword
 );
 router.get('/me', authenticate, me);
+router.get('/audit-logs', authenticate, auditLogs);
 
 export { router as authRouter };
