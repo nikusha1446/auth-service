@@ -12,6 +12,8 @@ import {
 import {
   auditLogs,
   forgotPassword,
+  googleAuth,
+  googleCallback,
   login,
   logout,
   logoutAll,
@@ -49,5 +51,7 @@ router.post(
 );
 router.get('/me', authenticate, me);
 router.get('/audit-logs', authenticate, auditLogs);
+router.get('/google', googleAuth);
+router.get('/google/callback', googleCallback);
 
 export { router as authRouter };

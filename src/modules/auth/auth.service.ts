@@ -9,6 +9,10 @@ import {
 import { generateAccessToken } from '../../common/utils/jwt.js';
 import { env } from '../../config/env.js';
 import { createAuditLog } from '../../common/services/audit.service.js';
+import {
+  getGoogleAuthUrl,
+  getGoogleUserInfo,
+} from '../../common/services/oauth.service.js';
 
 export interface RequestInfo {
   ipAddress: string;
@@ -269,4 +273,91 @@ export const resetPassword = async (
     action: 'PASSWORD_RESET',
     ...requestInfo,
   });
+};
+
+export const getGoogleOAuthUrl = (): string => {
+  return getGoogleAuthUrl();
+};
+
+export const googleLogin = async (
+  code: string,
+  requestInfo: RequestInfo
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  const userInfo = await getGoogleUserInfo(code);
+
+  const oauthAccount = await db.oAuthAccount.findUnique({
+    where: {
+      provider_providerAccountId: {
+        provider: 'google',
+        providerAccountId: userInfo.providerAccountId,
+      },
+    },
+    include: { user: true },
+  });
+
+  let user;
+
+  if (oauthAccount) {
+    user = oauthAccount.user;
+  } else {
+    user = await db.user.findUnique({
+      where: { email: userInfo.email },
+    });
+
+    if (user) {
+      await db.oAuthAccount.create({
+        data: {
+          provider: 'google',
+          providerAccountId: userInfo.providerAccountId,
+          userId: user.id,
+        },
+      });
+    } else {
+      user = await db.user.create({
+        data: {
+          email: userInfo.email,
+          emailVerified: true,
+          oauthAccounts: {
+            create: {
+              provider: 'google',
+              providerAccountId: userInfo.providerAccountId,
+            },
+          },
+        },
+      });
+
+      await createAuditLog({
+        userId: user.id,
+        action: 'REGISTER',
+        ...requestInfo,
+      });
+    }
+  }
+
+  const accessToken = generateAccessToken({
+    userId: user.id,
+    email: user.email,
+  });
+
+  const refreshToken = generateToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(
+    expiresAt.getDate() + parseInt(env.REFRESH_TOKEN_EXPIRES_IN_DAYS)
+  );
+
+  await db.refreshToken.create({
+    data: {
+      token: refreshToken,
+      userId: user.id,
+      expiresAt,
+    },
+  });
+
+  await createAuditLog({
+    userId: user.id,
+    action: 'LOGIN',
+    ...requestInfo,
+  });
+
+  return { accessToken, refreshToken };
 };

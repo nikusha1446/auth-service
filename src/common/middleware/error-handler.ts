@@ -11,6 +11,9 @@ const getStatusCode = (message: string): number => {
     'Refresh token expired': 401,
     'Invalid reset token': 400,
     'Reset token expired': 400,
+    'Google OAuth not configured': 501,
+    'Failed to exchange Google code for tokens': 400,
+    'Failed to get Google user info': 400,
   };
 
   return errorStatusMap[message] || 500;

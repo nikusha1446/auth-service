@@ -194,3 +194,38 @@ export const auditLogs: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+export const googleAuth: RequestHandler = async (req, res, next) => {
+  try {
+    const url = authService.getGoogleOAuthUrl();
+    res.redirect(url);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleCallback: RequestHandler = async (req, res, next) => {
+  try {
+    const code = req.query.code as string;
+
+    if (!code) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Missing authorization code' },
+      });
+      return;
+    }
+
+    const result = await authService.googleLogin(code, getRequestInfo(req));
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
